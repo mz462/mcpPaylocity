@@ -37,11 +37,7 @@ The server implements the following tools:
 
 The following endpoints will be implemented in future updates:
 
-- [ ] Additional employee endpoints (emergency contacts, primary pay rates, etc.)
-- [ ] Deductions endpoints
-- [ ] Benefits enrollment endpoints
-- [ ] Direct deposit endpoints
-- [ ] Additional company setup endpoints
+- [ ] Higher level insights (e.g. turnover rate, headcount by department, rate comparison etc.)
 
 ## Configuration
 
