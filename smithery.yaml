@@ -1,0 +1,42 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - paylocityClientId
+      - paylocityClientSecret
+      - paylocityCompanyIds
+    properties:
+      paylocityClientId:
+        type: string
+        description: Your Paylocity API client ID
+      paylocityClientSecret:
+        type: string
+        description: Your Paylocity API client secret
+      paylocityCompanyIds:
+        type: string
+        description: Comma-separated list of Paylocity company IDs
+      paylocityEnvironment:
+        type: string
+        default: production
+        description: The Paylocity API environment, e.g., production or testing
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({
+      command: 'mcppaylocity',
+      env: {
+        PAYLOCITY_CLIENT_ID: config.paylocityClientId,
+        PAYLOCITY_CLIENT_SECRET: config.paylocityClientSecret,
+        PAYLOCITY_COMPANY_IDS: config.paylocityCompanyIds,
+        PAYLOCITY_ENVIRONMENT: config.paylocityEnvironment
+      }
+    })
+  exampleConfig:
+    paylocityClientId: dummy_client_id
+    paylocityClientSecret: dummy_secret
+    paylocityCompanyIds: 12345,67890
+    paylocityEnvironment: testing
