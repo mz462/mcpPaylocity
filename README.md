@@ -14,6 +14,8 @@ The server implements Paylocity API resources with:
   - `paylocity://employees/{company_id}/{employee_id}` - Get details for a specific employee
   - `paylocity://earnings/{company_id}/{employee_id}` - Get earnings data for a specific employee
   - `paylocity://codes/{company_id}/{code_resource}` - Get company codes for a specific resource
+  - `paylocity://localtaxes/{company_id}/{employee_id}` - Get local taxes for a specific employee
+  - `paylocity://paystatement/{company_id}/{employee_id}/{year}/{check_date}` - Get pay statement details for a specific date
 
 ### Tools
 
@@ -26,14 +28,16 @@ The server implements the following tools:
   - Takes required `employee_id` and optional `company_id` parameters
 - `fetch_company_codes` - Fetches company codes for a specific resource
   - Takes required `code_resource` and optional `company_id` parameters
+- `fetch_employee_local_taxes` - Fetches local taxes for a specific employee
+  - Takes required `employee_id` and optional `company_id` parameters
+- `fetch_employee_paystatement_details` - Fetches pay statement details for a specific date
+  - Takes required `employee_id`, `year`, `check_date` and optional `company_id` parameters
 
 ## Future Implementations
 
 The following endpoints will be implemented in future updates:
 
 - [ ] Additional employee endpoints (emergency contacts, primary pay rates, etc.)
-- [ ] Pay statements endpoints
-- [ ] Local taxes endpoints
 - [ ] Deductions endpoints
 - [ ] Benefits enrollment endpoints
 - [ ] Direct deposit endpoints

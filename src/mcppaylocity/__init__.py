@@ -102,6 +102,28 @@ def register_resources(mcp, client, company_ids):
         print(f"Getting codes for company_id={company_id_str}, code_resource={code_resource}", file=sys.stderr)
         return client.get_company_codes(company_id_str, code_resource)
 
+    @mcp.resource(f"{PAYLOCITY_SCHEME}://localtaxes/{{company_id}}/{{employee_id}}")
+    def get_local_taxes(company_id: Optional[Union[str, int]] = None, employee_id: Optional[Union[str, int]] = None) -> Dict[str, Any]:
+        """Get local taxes for a specific employee."""
+        company_id_str = str(company_id) if company_id is not None else company_ids[0]
+        employee_id_str = str(employee_id)
+        print(f"Getting local taxes for company_id={company_id_str}, employee_id={employee_id_str}", file=sys.stderr)
+        return client.get_employee_local_taxes(company_id_str, employee_id_str)
+
+    @mcp.resource(f"{PAYLOCITY_SCHEME}://paystatement/{{company_id}}/{{employee_id}}/{{year}}/{{check_date}}")
+    def get_paystatement_details(
+        company_id: Optional[Union[str, int]] = None, 
+        employee_id: Optional[Union[str, int]] = None,
+        year: Union[str, int] = None,
+        check_date: str = None
+    ) -> Dict[str, Any]:
+        """Get pay statement details for a specific employee, year and check date."""
+        company_id_str = str(company_id) if company_id is not None else company_ids[0]
+        employee_id_str = str(employee_id)
+        year_str = str(year)
+        print(f"Getting pay statement details for company_id={company_id_str}, employee_id={employee_id_str}, year={year_str}, check_date={check_date}", file=sys.stderr)
+        return client.get_employee_paystatement_details(company_id_str, employee_id_str, year_str, check_date)
+
 def register_tools(mcp, client, company_ids):
     """
     Register all Paylocity tools with the MCP server.
@@ -168,6 +190,46 @@ def register_tools(mcp, client, company_ids):
             
         company_id_str = str(company_id) if company_id is not None else company_ids[0]
         return client.get_company_codes(company_id_str, code_resource)
+
+    @mcp.tool()
+    def fetch_employee_local_taxes(company_id: Optional[Union[str, int]] = None, employee_id: Union[str, int] = None) -> Dict[str, Any]:
+        """
+        Fetch local taxes for a specific employee.
+        
+        Args:
+            company_id: Optional company ID (string or integer). If not provided, uses the first company ID from configuration.
+            employee_id: Employee ID (string or integer) to get local taxes for.
+        """
+        if employee_id is None:
+            raise ValueError("employee_id is required")
+            
+        company_id_str = str(company_id) if company_id is not None else company_ids[0]
+        employee_id_str = str(employee_id)
+        return client.get_employee_local_taxes(company_id_str, employee_id_str)
+
+    @mcp.tool()
+    def fetch_employee_paystatement_details(
+        company_id: Optional[Union[str, int]] = None, 
+        employee_id: Union[str, int] = None,
+        year: Union[str, int] = None,
+        check_date: str = None
+    ) -> Dict[str, Any]:
+        """
+        Fetch pay statement details for a specific employee, year and check date.
+        
+        Args:
+            company_id: Optional company ID (string or integer). If not provided, uses the first company ID from configuration.
+            employee_id: Employee ID (string or integer) to get pay statement details for.
+            year: The year to get pay statement details for.
+            check_date: The check date to get pay statement details for (format: MM/DD/YYYY).
+        """
+        if any(param is None for param in [employee_id, year, check_date]):
+            raise ValueError("employee_id, year, and check_date are all required")
+            
+        company_id_str = str(company_id) if company_id is not None else company_ids[0]
+        employee_id_str = str(employee_id)
+        year_str = str(year)
+        return client.get_employee_paystatement_details(company_id_str, employee_id_str, year_str, check_date)
 
 # Expose important items at package level
 __all__ = ['main']

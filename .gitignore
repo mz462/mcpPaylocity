@@ -44,3 +44,6 @@ src/mcppaylocity/access_token/*
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Claude
+Claude.md
