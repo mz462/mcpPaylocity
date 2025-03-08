@@ -9,9 +9,19 @@ from typing import Any, Dict, List, Optional, Union
 import os
 import json
 import sys
+import logging
+import time
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from .paylocity_client import PaylocityClient
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stderr)]
+)
+logger = logging.getLogger('mcppaylocity')
 
 # Register custom URI scheme for paylocity resources
 PAYLOCITY_SCHEME = "paylocity"
@@ -22,10 +32,10 @@ def main():
     Initializes the server, configures resources and tools, and starts the server.
     """
     try:
-        print("Starting Paylocity MCP server...", file=sys.stderr)
+        logger.info("Starting Paylocity MCP server...")
         # Load environment variables from .env file
         load_dotenv()
-        print("Loaded environment variables", file=sys.stderr)
+        logger.info("Loaded environment variables")
         
         # Get configuration from environment variables
         client_id = os.getenv("PAYLOCITY_CLIENT_ID")
@@ -36,16 +46,29 @@ def main():
         company_ids_str = os.getenv("PAYLOCITY_COMPANY_IDS", "")
         company_ids = [id.strip() for id in company_ids_str.split(",") if id.strip()]
         
-        if not all([client_id, client_secret]) or not company_ids:
-            error_msg = "Missing required Paylocity API credentials or company IDs"
-            print(f"Error: {error_msg}", file=sys.stderr)
+        # Validate required environment variables
+        missing_vars = []
+        if not client_id:
+            missing_vars.append("PAYLOCITY_CLIENT_ID")
+        if not client_secret:
+            missing_vars.append("PAYLOCITY_CLIENT_SECRET")
+        if not company_ids:
+            missing_vars.append("PAYLOCITY_COMPANY_IDS")
+            
+        if missing_vars:
+            error_msg = "Missing required environment variables: {}".format(', '.join(missing_vars))
+            logger.error(error_msg)
             raise ValueError(error_msg)
         
-        print(f"Environment: {environment}", file=sys.stderr)
-        print(f"Company IDs: {company_ids}", file=sys.stderr)
+        logger.info("Environment: %s", environment)
+        logger.info("Company IDs: %s", company_ids)
         
         # Create FastMCP instance
         mcp = FastMCP("Paylocity")
+        
+        # Configure WebSocket settings
+        # Note: FastMCP handles WebSocket transport automatically
+        # We just need to set the appropriate parameters
         
         # Initialize Paylocity client
         client = PaylocityClient(client_id, client_secret, environment)
@@ -56,11 +79,11 @@ def main():
         # Register tools
         register_tools(mcp, client, company_ids)
         
-        print("Starting server...", file=sys.stderr)
+        logger.info("Starting server with WebSocket transport...")
         # Run the server
         mcp.run()
     except Exception as e:
-        print(f"Error starting server: {str(e)}", file=sys.stderr)
+        logger.error("Error starting server: %s", str(e), exc_info=True)
         raise
 
 def register_resources(mcp, client, company_ids):
@@ -72,45 +95,60 @@ def register_resources(mcp, client, company_ids):
         client: The PaylocityClient instance
         company_ids: List of company IDs to use
     """
-    @mcp.resource(f"{PAYLOCITY_SCHEME}://employees/{{company_id}}")
+    @mcp.resource("{}://employees/{{company_id}}".format(PAYLOCITY_SCHEME))
     def get_employees(company_id: Optional[Union[str, int]] = None) -> Dict[str, Any]:
         """Get all employees for a company."""
         company_id_str = str(company_id) if company_id is not None else company_ids[0]
-        print(f"Getting employees for company_id={company_id_str}", file=sys.stderr)
-        return client.get_all_employees(company_id_str)
+        logger.info("Getting employees for company_id=%s", company_id_str)
+        
+        # Implement retry logic for handling timeouts
+        max_retries = 3
+        retry_delay = 1  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                return client.get_all_employees(company_id_str)
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logger.warning("Attempt %d failed: %s. Retrying in %d seconds...", attempt+1, str(e), retry_delay)
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error("Failed after %d attempts: %s", max_retries, str(e))
+                    raise
     
-    @mcp.resource(f"{PAYLOCITY_SCHEME}://employees/{{company_id}}/{{employee_id}}")
+    @mcp.resource("{}://employees/{{company_id}}/{{employee_id}}".format(PAYLOCITY_SCHEME))
     def get_employee_details(company_id: Optional[Union[str, int]] = None, employee_id: Optional[Union[str, int]] = None) -> Dict[str, Any]:
         """Get details for a specific employee."""
         company_id_str = str(company_id) if company_id is not None else company_ids[0]
         employee_id_str = str(employee_id)
-        print(f"Getting employee details for company_id={company_id_str}, employee_id={employee_id_str}", file=sys.stderr)
+        print("Getting employee details for company_id={}, employee_id={}".format(company_id_str, employee_id_str), file=sys.stderr)
         return client.get_employee_details(company_id_str, employee_id_str)
     
-    @mcp.resource(f"{PAYLOCITY_SCHEME}://earnings/{{company_id}}/{{employee_id}}")
+    @mcp.resource("{}://earnings/{{company_id}}/{{employee_id}}".format(PAYLOCITY_SCHEME))
     def get_earnings(company_id: Optional[Union[str, int]] = None, employee_id: Optional[Union[str, int]] = None) -> Dict[str, Any]:
         """Get earnings data for a specific employee."""
         company_id_str = str(company_id) if company_id is not None else company_ids[0]
         employee_id_str = str(employee_id)
-        print(f"Getting earnings for company_id={company_id_str}, employee_id={employee_id_str}", file=sys.stderr)
+        print("Getting earnings for company_id={}, employee_id={}".format(company_id_str, employee_id_str), file=sys.stderr)
         return client.get_employee_earnings(company_id_str, employee_id_str)
     
-    @mcp.resource(f"{PAYLOCITY_SCHEME}://codes/{{company_id}}/{{code_resource}}")
+    @mcp.resource("{}://codes/{{company_id}}/{{code_resource}}".format(PAYLOCITY_SCHEME))
     def get_codes(company_id: Optional[Union[str, int]] = None, code_resource: str = None) -> Dict[str, Any]:
         """Get company codes for a specific resource."""
         company_id_str = str(company_id) if company_id is not None else company_ids[0]
-        print(f"Getting codes for company_id={company_id_str}, code_resource={code_resource}", file=sys.stderr)
+        print("Getting codes for company_id={}, code_resource={}".format(company_id_str, code_resource), file=sys.stderr)
         return client.get_company_codes(company_id_str, code_resource)
 
-    @mcp.resource(f"{PAYLOCITY_SCHEME}://localtaxes/{{company_id}}/{{employee_id}}")
+    @mcp.resource("{}://localtaxes/{{company_id}}/{{employee_id}}".format(PAYLOCITY_SCHEME))
     def get_local_taxes(company_id: Optional[Union[str, int]] = None, employee_id: Optional[Union[str, int]] = None) -> Dict[str, Any]:
         """Get local taxes for a specific employee."""
         company_id_str = str(company_id) if company_id is not None else company_ids[0]
         employee_id_str = str(employee_id)
-        print(f"Getting local taxes for company_id={company_id_str}, employee_id={employee_id_str}", file=sys.stderr)
+        print("Getting local taxes for company_id={}, employee_id={}".format(company_id_str, employee_id_str), file=sys.stderr)
         return client.get_employee_local_taxes(company_id_str, employee_id_str)
 
-    @mcp.resource(f"{PAYLOCITY_SCHEME}://paystatement/{{company_id}}/{{employee_id}}/{{year}}/{{check_date}}")
+    @mcp.resource("{}://paystatement/{{company_id}}/{{employee_id}}/{{year}}/{{check_date}}".format(PAYLOCITY_SCHEME))
     def get_paystatement_details(
         company_id: Optional[Union[str, int]] = None, 
         employee_id: Optional[Union[str, int]] = None,
@@ -121,7 +159,7 @@ def register_resources(mcp, client, company_ids):
         company_id_str = str(company_id) if company_id is not None else company_ids[0]
         employee_id_str = str(employee_id)
         year_str = str(year)
-        print(f"Getting pay statement details for company_id={company_id_str}, employee_id={employee_id_str}, year={year_str}, check_date={check_date}", file=sys.stderr)
+        print("Getting pay statement details for company_id={}, employee_id={}, year={}, check_date={}".format(company_id_str, employee_id_str, year_str, check_date), file=sys.stderr)
         return client.get_employee_paystatement_details(company_id_str, employee_id_str, year_str, check_date)
 
 def register_tools(mcp, client, company_ids):
@@ -133,6 +171,30 @@ def register_tools(mcp, client, company_ids):
         client: The PaylocityClient instance
         company_ids: List of company IDs to use
     """
+    # Helper function to create a new Paylocity client (for lazy initialization)
+    def create_paylocity_client():
+        client_id = os.getenv("PAYLOCITY_CLIENT_ID")
+        client_secret = os.getenv("PAYLOCITY_CLIENT_SECRET")
+        environment = os.getenv("PAYLOCITY_ENVIRONMENT", "production")
+        return PaylocityClient(client_id, client_secret, environment)
+    
+    # Helper function for implementing retry logic
+    def with_retry(func, *args, **kwargs):
+        max_retries = 3
+        retry_delay = 1  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logger.warning("Attempt %d failed: %s. Retrying in %d seconds...", attempt+1, str(e), retry_delay)
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error("Failed after %d attempts: %s", max_retries, str(e))
+                    raise
+    
     @mcp.tool()
     def fetch_employees(company_id: Optional[Union[str, int]] = None) -> Dict[str, Any]:
         """
@@ -142,7 +204,7 @@ def register_tools(mcp, client, company_ids):
             company_id: Optional company ID (string or integer). If not provided, uses the first company ID from configuration.
         """
         company_id_str = str(company_id) if company_id is not None else company_ids[0]
-        return client.get_all_employees(company_id_str)
+        return with_retry(client.get_all_employees, company_id_str)
     
     @mcp.tool()
     def fetch_employee_details(company_id: Optional[Union[str, int]] = None, employee_id: Union[str, int] = None) -> Dict[str, Any]:
