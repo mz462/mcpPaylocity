@@ -1,5 +1,5 @@
 # mcpPaylocity MCP Server
-[![smithery badge](https://smithery.ai/badge/@mz462/mcp-paylocity)](https://smithery.ai/server/@mz462/mcp-paylocity)
+[![smithery badge](https://smithery.ai/badge/@mz462/mcppaylocity)](https://smithery.ai/server/@mz462/mcppaylocity)
 
 A Model Context Protocol (MCP) server to fetch data from Paylocity API endpoints.
 
