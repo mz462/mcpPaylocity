@@ -13,6 +13,7 @@ import logging
 import time
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ModelHint, ModelPreferences
 from .paylocity_client import PaylocityClient
 
 # Configure logging
@@ -25,6 +26,15 @@ logger = logging.getLogger('mcppaylocity')
 
 # Register custom URI scheme for paylocity resources
 PAYLOCITY_SCHEME = "paylocity"
+
+# Default instructions presented in the MCP handshake
+INSTRUCTIONS = (
+    "This server exposes Paylocity resources and tools. "
+    "Use the provided resources to fetch employee, payroll and code data."
+)
+
+# Package version used in the handshake
+SERVER_VERSION = "0.1.0"
 
 def main():
     """
@@ -41,6 +51,25 @@ def main():
         client_id = os.getenv("PAYLOCITY_CLIENT_ID")
         client_secret = os.getenv("PAYLOCITY_CLIENT_SECRET")
         environment = os.getenv("PAYLOCITY_ENVIRONMENT", "production")
+
+        # Optional model preference settings
+        cost_pref = os.getenv("MODEL_COST_PRIORITY")
+        speed_pref = os.getenv("MODEL_SPEED_PRIORITY")
+        intel_pref = os.getenv("MODEL_INTELLIGENCE_PRIORITY")
+        hints_pref = os.getenv("MODEL_HINTS")
+
+        model_prefs: ModelPreferences | None = None
+        if any([cost_pref, speed_pref, intel_pref, hints_pref]):
+            hints: list[ModelHint] | None = None
+            if hints_pref:
+                hints = [ModelHint(name=h.strip()) for h in hints_pref.split(',') if h.strip()]
+
+            model_prefs = ModelPreferences(
+                hints=hints,
+                costPriority=float(cost_pref) if cost_pref else None,
+                speedPriority=float(speed_pref) if speed_pref else None,
+                intelligencePriority=float(intel_pref) if intel_pref else None,
+            )
         
         # Get company IDs
         company_ids_str = os.getenv("PAYLOCITY_COMPANY_IDS", "")
@@ -63,8 +92,14 @@ def main():
         logger.info("Environment: %s", environment)
         logger.info("Company IDs: %s", company_ids)
         
-        # Create FastMCP instance
-        mcp = FastMCP("Paylocity")
+        # Create FastMCP instance with handshake metadata
+        mcp = FastMCP("Paylocity", instructions=INSTRUCTIONS)
+        mcp._mcp_server.version = SERVER_VERSION
+
+        if model_prefs is not None:
+            logger.info("Model preferences configured: %s", model_prefs.model_dump())
+        else:
+            logger.info("No model preferences configured")
         
         # Configure WebSocket settings
         # Note: FastMCP handles WebSocket transport automatically

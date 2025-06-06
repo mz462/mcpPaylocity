@@ -46,8 +46,18 @@ The server requires the following environment variables to be set:
 - `PAYLOCITY_CLIENT_SECRET` - Your Paylocity API client secret
 - `PAYLOCITY_COMPANY_IDS` - Comma-separated list of company IDs to use
 - `PAYLOCITY_ENVIRONMENT` - API environment to use (`production` or `testing`)
+- `MODEL_COST_PRIORITY` - Optional cost priority for model selection
+- `MODEL_SPEED_PRIORITY` - Optional speed priority for model selection
+- `MODEL_INTELLIGENCE_PRIORITY` - Optional intelligence priority for model selection
+- `MODEL_HINTS` - Optional comma-separated model name hints
 
 These can be set in a `.env` file in the project root directory.
+
+### MCP Handshake
+
+On startup the server responds to the MCP `initialize` request with handshake data
+containing its capabilities, instructions, protocol version and server info. The
+instructions field describes how to use the Paylocity resources and tools.
 
 ## Security
 
