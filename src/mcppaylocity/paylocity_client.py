@@ -184,5 +184,10 @@ class PaylocityClient:
             response = self._make_request('GET', endpoint)
             return response.json()
         except Exception as e:
-            logger.error("Failed to retrieve employee data for employee %s in company %s: %s", employee_id, company_id, str(e))
-            raise
+            logger.error(
+                "Failed to retrieve employee data for employee %s in company %s: %s",
+                employee_id,
+                company_id,
+                str(e),
+            )
+            raise RuntimeError("Unable to fetch employee sensitive data") from e

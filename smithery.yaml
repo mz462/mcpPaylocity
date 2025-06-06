@@ -23,6 +23,18 @@ startCommand:
         type: string
         default: production
         description: The Paylocity API environment, e.g., production or testing
+      modelCostPriority:
+        type: number
+        description: Optional cost priority for model selection
+      modelSpeedPriority:
+        type: number
+        description: Optional speed priority for model selection
+      modelIntelligencePriority:
+        type: number
+        description: Optional intelligence priority for model selection
+      modelHints:
+        type: string
+        description: Optional comma-separated model name hints
   commandFunction:
     # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
     |-
@@ -32,7 +44,11 @@ startCommand:
         PAYLOCITY_CLIENT_ID: config.paylocityClientId,
         PAYLOCITY_CLIENT_SECRET: config.paylocityClientSecret,
         PAYLOCITY_COMPANY_IDS: config.paylocityCompanyIds,
-        PAYLOCITY_ENVIRONMENT: config.paylocityEnvironment
+        PAYLOCITY_ENVIRONMENT: config.paylocityEnvironment,
+        MODEL_COST_PRIORITY: config.modelCostPriority,
+        MODEL_SPEED_PRIORITY: config.modelSpeedPriority,
+        MODEL_INTELLIGENCE_PRIORITY: config.modelIntelligencePriority,
+        MODEL_HINTS: config.modelHints
       }
     })
   exampleConfig:
@@ -40,3 +56,7 @@ startCommand:
     paylocityClientSecret: dummy_secret
     paylocityCompanyIds: 12345,67890
     paylocityEnvironment: testing
+    modelCostPriority: 0.5
+    modelSpeedPriority: 0.2
+    modelIntelligencePriority: 0.8
+    modelHints: gpt-4o
