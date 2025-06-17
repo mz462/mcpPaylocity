@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/mz462-mcppaylocity-badge.png)](https://mseep.ai/app/mz462-mcppaylocity)
+
 # mcpPaylocity MCP Server
 [![smithery badge](https://smithery.ai/badge/@mz462/mcppaylocity)](https://smithery.ai/server/@mz462/mcppaylocity)
 
